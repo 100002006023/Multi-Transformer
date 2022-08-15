@@ -1,0 +1,183 @@
+# General ResNet classifier (ResNet50), transfer learning from Keras implementation
+from __future__ import print_function, division
+from builtins import range, input
+# Note: It might need to update the version of future
+# sudo pip install -U future
+#from CBAM import cbam_block
+from keras.layers import Input, Lambda, Dense, Flatten, AveragePooling2D, Dropout
+from keras.models import Model
+from keras.optimizers import Adam
+
+from keras.applications.resnet50 import ResNet50, preprocess_input
+from keras.applications.inception_v3 import InceptionV3, preprocess_input
+from keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input
+from keras.applications.vgg16 import VGG16, preprocess_input
+from keras.applications.xception import Xception, preprocess_input
+from keras.applications.densenet import DenseNet121, preprocess_input
+#from keras.applications.efficientnet import EfficientNetB0, preprocess_input
+
+from keras.preprocessing import image
+from keras.preprocessing.image import ImageDataGenerator
+import keras
+from sklearn.metrics import confusion_matrix
+import numpy as np
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from keras.callbacks import TensorBoard
+
+from glob import glob
+import cv2
+
+
+# re-sizing the images accordingly for processing
+IMAGE_SIZE = (128,128,3) # Must be changed depending on dataset
+
+# basic training parameter configurations
+#epochs = 500
+#batch_size = 16
+
+# The original data has been taken from:
+# https://www.kaggle .com/paultimothymooney/blood-cells
+#train_path = 'TRAIN'
+#valid_path = 'TEST'
+
+
+# useful for getting number of files
+#image_files = glob(train_path + '/*/*.jp*g')
+#valid_image_files = glob(valid_path + '/*/*.jp*g')
+
+# useful for getting number of classes
+#folders = glob(train_path + '/*')
+
+
+# Displaying an image from dataset
+#plt.imshow(image.load_img(np.random.choice(image_files)))
+#plt.show()
+
+
+# add preprocessing layer to the front of VGG (input_shape = H x W x C)
+#res = ResNet50(input_shape=(128,128,3), weights=None, include_top=False)  # do not include head, transfer learning
+#res = InceptionV3(input_shape=(224,224,3), weights=None, include_top=False)
+#res = MobileNetV2(input_shape=(224,224,3), weights=None, include_top=False)
+#res = VGG16(input_shape=(224,224,3), weights=None, include_top=False)
+#res = Xception(input_shape=(224,224,3), weights=None, include_top=False)
+#res = DenseNet121(input_shape=(224,224,3), weights=None, include_top=False)
+#model = ResNet50(input_shape=(128,128,3), weights=None, classes=2)
+#model = InceptionV3(input_shape=(128,128,3),weights=None, classes=2)
+#model = MobileNetV2(input_shape=(128,128,3),weights=None, classes=2)
+#model = VGG16(input_shape=(128,128,3),weights=None, classes=2)
+#model = Xception(input_shape=(128,128,3),weights=None, classes=2)
+model = DenseNet121(input_shape=(128,128,3),weights=None, classes=2)
+
+# and do not train existing weights
+#for layer in res.layers:
+#  layer.trainable = False
+
+# layers creeation - Here more can be added
+
+#x= AveragePooling2D()(res.output)
+#x = Flatten()(x)
+#x = Dense(1024, activation='relu')(x)
+#x = Dropout(0.5)(x)
+#prediction = Dense(2, activation='softmax')(x)
+
+
+# creating a model object
+#model = Model(inputs=res.input, outputs=prediction)
+
+# view the structure of the model
+model.summary()
+
+# compiles the model with cost and optimization methods
+model.compile(
+  loss='sparse_categorical_crossentropy',
+  optimizer=keras.optimizers.Adam(lr=1e-3),
+  #optimizer='rmsprop',
+  metrics=['accuracy']
+  
+)
+checkpoint_filepath = "/tmp/checkpoint"
+checkpoint_callback = keras.callbacks.ModelCheckpoint(
+    checkpoint_filepath,
+    monitor="val_accuracy",
+    save_best_only=True,
+    save_weights_only=True)
+
+
+# create an instance of ImageDataGenerator
+#gen = ImageDataGenerator(
+ # rotation_range=20,
+ # width_shift_range=0.1,
+  #height_shift_range=0.1,
+  #shear_range=0.1,
+  #zoom_range=0.2,
+#  horizontal_flip=True,
+  #vertical_flip=True,
+  #preprocessing_function=preprocess_input
+#)
+
+
+# testing the generator
+
+# get label mapping for confusion matrix to be plotted later
+#test_gen = gen.flow_from_directory(valid_path, target_size=IMAGE_SIZE)
+#print(test_gen.class_indices)
+#labels = [None] * len(test_gen.class_indices)
+#for k, v in test_gen.class_indices.items():
+#  labels[v] = k
+
+# Her it can be displayed for debugging purposes, but it should be a strangely colored image (due to VGG weights being BGR)
+'''for x, y in test_gen:
+  print("min:", x[0].min(), "max:", x[0].max())
+  plt.title(labels[np.argmax(y[0])])
+  plt.imshow(x[0])
+  plt.show()
+  break'''
+
+
+# create generators
+#train_generator = gen.flow_from_directory(
+#  train_path,
+#  target_size=IMAGE_SIZE,
+#  shuffle=True,
+#  batch_size=batch_size,
+#)
+#valid_generator = gen.flow_from_directory(
+#  valid_path,
+#  target_size=IMAGE_SIZE,
+#  shuffle=True,
+#  batch_size=batch_size,
+#)
+
+x_train=np.load('t1t2datas.npy')
+y_train=np.load('t1t2p53labels.npy')
+a,b,c,d=train_test_split(x_train,y_train,test_size=0.2)
+print(a.shape)
+a=np.repeat(a[...,np.newaxis],3,-1)
+b=np.repeat(b[...,np.newaxis],3,-1)
+#c=c.reshape((224,224,1))
+#a=a[:,:,:,np.newaxis]
+print(a.shape)
+print(b.shape)
+# fit the model
+r = model.fit(a,c,epochs=20,batch_size=32,validation_split=0.1,
+  callbacks=[checkpoint_callback,TensorBoard(log_dir='mytensorboard')]
+)
+#model.load_weights(checkpoint_filepath)
+loss,accuracy=model.evaluate(b,d, batch_size=32)
+print('accuracy',accuracy)
+print('loss',loss)
+#y=model.predict_classes(b).astype('int')
+#predict_test = model.predict(b)
+
+#np.savetxt("residhlab.csv", d, delimiter=',')
+#np.savetxt("mgmtpre.csv", y, delimiter=',')
+#np.savetxt("residhpre.csv", predict_test, delimiter=',')
+model.save('p53.h5')
+
+
+
+
+
+
