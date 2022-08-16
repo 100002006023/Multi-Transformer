@@ -1,0 +1,158 @@
+import SimpleITK as sitk
+import numpy as np
+import os
+
+
+def resample_image(itk_image, out_spacing, out_size):  
+    resample = sitk.ResampleImageFilter()  
+    resample.SetOutputSpacing(out_spacing)
+    resample.SetSize(out_size)
+    resample.SetOutputDirection(itk_image.GetDirection())
+    resample.SetOutputOrigin(itk_image.GetOrigin())
+    resample.SetTransform(sitk.Transform())  
+    resample.SetDefaultPixelValue(itk_image.GetPixelIDValue())
+
+    resample.SetInterpolator(sitk.sitkBSpline)
+
+    itkimgResampled = resample.Execute(itk_image) 
+
+    rescalFilt = sitk.RescaleIntensityImageFilter()
+    rescalFilt.SetOutputMaximum(255)
+    rescalFilt.SetOutputMinimum(0)
+    itkimgResampled = rescalFilt.Execute(sitk.Cast(itkimgResampled, sitk.sitkFloat64))
+    imgResampled = sitk.GetArrayFromImage(itkimgResampled)
+    return imgResampled, itkimgResampled
+
+
+def resample_T(T_path):
+    reader = sitk.ImageSeriesReader()  
+    img_names = reader.GetGDCMSeriesFileNames(T_path)
+    # img_names = os.listdir(T_path)
+    # for img_name in img_names:
+    # ds=sitk.ReadImage(T_path+img_name)
+    reader.SetFileNames(img_names)
+    image = reader.Execute()
+    # image_array = sitk.GetArrayFromImage(image)
+
+    originSize = image.GetSize()
+    originSpcaing = image.GetSpacing()
+    new_size = [128, 128, 21]
+    newspacing = [
+        int(np.round(originSize[0] * originSpcaing[0] / new_size[0])),
+        int(np.round(originSize[1] * originSpcaing[1] / new_size[1])),
+        int(np.round(originSize[2] * originSpcaing[2] / new_size[2]))
+    ]
+    resample_image_array, resampleimage = resample_image(image, newspacing, new_size)
+    resample_image_array = resample_image_array.astype(np.float64)
+    return resample_image_array, resampleimage
+
+
+def adjust_numpy(martix):
+    a = martix.shape[0]
+    mat_1 = np.zeros(shape=martix.shape)
+    mat_2 = np.zeros(shape=martix.shape)
+    for i in range(a):
+        # for k in range(2):
+        # mat_1[i,:,:,k] = np.flipud(martix[i,:,:,k])
+        # mat_2[i,:,:,k] = np.fliplr(martix[i,:,:,k])
+        mat_1[i, :, :] = np.flipud(martix[i, :, :]) 
+        mat_2[i, :, :] = np.fliplr(martix[i, :, :]) 
+    #return mat_1,mat_2
+    return mat_2
+
+
+p = "C:\\Users\\A406\\Desktop\\data"
+
+f = os.listdir(p)
+
+data = []
+idhlabels = []
+ki67labels = []
+MGMTlabels = []
+p53labels = []
+for x in f:
+    pp = p + '/' + x
+    ff = os.listdir(pp)
+    if 'T2' in ff and 'T1+' in ff:
+        # and len(os.listdir(pp+'/'+'T1+')) != 0 and len(os.listdir(pp+'/'+'DWI')) != 0:
+        #T1_p = pp + '/' + 'T1+'
+        T2_p = pp+'/'+'T2'
+
+
+        #T1_d, _ = resample_T(T1_p)
+        T2_d, _ = resample_T(T2_p)
+
+        # T_d = np.concatenate((T1_d[:,:,:,np.newaxis],T2_d[:,:,:,np.newaxis]),axis=-1)
+        # T_d = np.concatenate((T1_d[:,:,:],T2_d[:,:,:]),axis=0)
+        # T1 = os.listdir(T1_d_image)
+        # T2 = os.listdir(T2_d_image)
+        # T1_l = len(T1)
+        # T2_l = len(T2)
+        #print(T1_d.shape)
+        print(T2_d.shape)
+        #Ta = np.zeros((32, T1_d.shape[1], T1_d.shape[2])) 
+        #print(Ta.shape)
+        #for i in range(0, 16):
+            #Ta[i * 2, :, :] = T1_d[i, :, :]
+            # Ta[i*2+1,:,:] = T2_d[i,:,:]
+        #m = pp[-7]
+        #n = pp[-5]
+        #o = pp[-3]
+        #l = pp[-1] 
+        #print(m)
+        #print(n)
+        #print(o)
+        #print(l)
+        #for i in range(6, 15):
+            #Ta[i * 2, :, :] = T1_d[i, :, :]
+            #data.append(T1_d[i, :, :])
+            #idhlabels.append(int(m))
+            #ki67labels.append(int(n))
+            #MGMTlabels.append(int(o))
+            #p53labels.append(int(l))
+        data.append(T2_d[10, :, :])
+            #idhlabels.append(int(m))
+            #ki67labels.append(int(n))
+            #MGMTlabels.append(int(o))
+            #p53labels.append(int(l))
+        #if m == '1' and o == '0' and l == '0':
+        #if m == '1':
+            #T1_d_1, T1_d_2 = adjust_numpy(T1_d)
+            #T1_d_1 = adjust_numpy(T1_d)
+            #T2_d_1 = adjust_numpy(T2_d)
+            #for i in range(6, 15):
+            #Ta[i * 2, :, :] = T1_d[i, :, :]
+                #data.append(T1_d_1[i, :, :])
+                #idhlabels.append(int(m))
+                #ki67labels.append(int(n))
+                #MGMTlabels.append(int(o))
+                #p53labels.append(int(l))
+                #data.append(T2_d_1[i, :, :])
+                #idhlabels.append(int(m))
+                #ki67labels.append(int(n))
+                #MGMTlabels.append(int(o))
+                #p53labels.append(int(l))
+            #data.append(T1_d_1)
+        # data.append(T1_d_2)
+            #labels.append(int(l))
+        # labels.append(int(l))
+        # print(labels)
+
+data = np.array(data) / 255
+# print(data.shape)
+
+#idhlabels =np.array(idhlabels)
+#ki67labels =np.array(ki67labels)
+#MGMTlabels =np.array(MGMTlabels)
+#p53labels =np.array(p53labels)
+#data = np.swapaxes(data, 1, 3)  
+#data = np.swapaxes(data, 1, 2)  
+# for ii in range(len(labels)):
+#    if labels[ii][1] == 1:
+#        labels[ii][0] = 1
+
+np.save('data', data)
+#np.save('alltrueidh', idhlabels)
+#np.save('alltrueki67', ki67labels)
+#np.save('alltrueMGMT', MGMTlabels)
+#np.save('alltruep53', p53labels)
